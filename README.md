@@ -10,7 +10,7 @@ VMware Powercli's module with the purpose of automating the configuration of vSp
 
 **Erwan Quélin**
 - <https://github.com/equelin>
-- <https://twitter.com/equelin>
+- <https://twitter.com/erwanquelin>
 
 ## License
 
