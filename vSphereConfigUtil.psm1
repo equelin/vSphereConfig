@@ -63,8 +63,12 @@ function SetvSwitchs {
   Process {
     If ((Get-VirtualSwitch -Name $vSwitch.Name -ErrorAction SilentlyContinue) -eq $null){
       Write-Host "*** Creating Virtual Switch $($vSwitch.Name)" -ForegroundColor Cyan
-      $VMHost | New-VirtualSwitch -Name $vSwitch.Name -Mtu $vSwitch.Mtu -Nic $vSwitch.Nic | Out-Null
-      SetNicTeamingPolicy -Object $vSwitch -Type "vSwitch" -VMHost $VMHost
+      If ($vSwitch.Nic -eq $null){
+        $VMHost | New-VirtualSwitch -Name $vSwitch.Name -Mtu $vSwitch.Mtu | Out-Null
+      } else {
+        $VMHost | New-VirtualSwitch -Name $vSwitch.Name -Mtu $vSwitch.Mtu -Nic $vSwitch.Nic | Out-Null
+        SetNicTeamingPolicy -Object $vSwitch -Type "vSwitch" -VMHost $VMHost
+      }
     }
   }
 }
@@ -101,6 +105,8 @@ function SetVmkernels {
       If ($vmkernel.VMotionEnabled) {
         $VMHost | Get-VMHostNetworkAdapter | where { $_.PortGroupName -eq $vmkernel.PortGroupName } | Set-VMHostNetworkAdapter -VMotionEnabled $true -Confirm:$false | Out-Null
       }
+      Write-Host "*** Set VlanID $($vmkernel.VLanID)" -ForegroundColor Cyan
+      $VMHost | Get-VirtualPortGroup -Name $vmkernel.PortGroupName | Set-VirtualPortGroup -VLanId $vmkernel.VLanID | Out-Null
       SetNicTeamingPolicy -Object $Vmkernel -Type "Vmkernel" -VMHost $VMHost
     }
   }
