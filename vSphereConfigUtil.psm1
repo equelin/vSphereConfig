@@ -1,4 +1,84 @@
 ## functions that are used by the module, but not published for end-user consumption
+function GetVirtualSwitchsArray {
+  [CmdletBinding()]
+  Param (
+    [Parameter(Mandatory=$true,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [PSObject]$vSwitch,
+    [Parameter(Mandatory=$true)]
+    [array]$ListPropertiesvSwitchs,
+    [Parameter(Mandatory=$true)]
+    [array]$ListPropertiesNicTeaming
+  )
+  Begin{}
+  Process{
+    $Hashtable = @{}
+    $NicTeaming = Get-NicTeamingPolicy -VirtualSwitch $vSwitch | Select-Object -Property $ListPropertiesNicTeaming
+    $vSwitch = $vSwitch | Select-Object -Property $ListPropertiesvSwitchs
+    ForEach ($vSwitchProperty in $vSwitch.PSObject.Properties) {
+      $Hashtable.($vSwitchProperty.Name) = $vSwitchProperty.Value
+    }
+    ForEach ($NicTeamingProperty in $NicTeaming.PSObject.Properties) {
+      $Hashtable.($NicTeamingProperty.Name) = $NicTeamingProperty.Value
+    }
+    Write-Output $Hashtable
+  }
+}
+
+function GetPortgroupsArray {
+  [CmdletBinding()]
+  Param (
+    [Parameter(Mandatory=$true,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [array]$PortgroupName,
+    [Parameter(Mandatory=$true)]
+    [array]$ListPropertiesPortgroups,
+    [Parameter(Mandatory=$true)]
+    [array]$ListPropertiesNicTeaming
+  )
+  Begin{}
+  Process{
+    $Hashtable = @{}
+    $VirtualPortGroup = Get-VirtualPortGroup -Name $PortgroupName.Name
+    $NicTeaming = Get-NicTeamingPolicy -VirtualPortGroup $VirtualPortGroup | Select-Object -Property $ListPropertiesNicTeaming
+    $VirtualPortGroup = $VirtualPortGroup | Select-Object -Property $ListPropertiesPortgroups
+    ForEach ($PortgroupProperty in $VirtualPortGroup.PSObject.Properties) {
+      $Hashtable.($PortgroupProperty.Name) = $PortgroupProperty.Value
+    }
+    ForEach ($NicTeamingProperty in $NicTeaming.PSObject.Properties) {
+      $Hashtable.($NicTeamingProperty.Name) = $NicTeamingProperty.Value
+    }
+    Write-Output $Hashtable
+  }
+}
+
+function GetVmkernelsArray {
+  [CmdletBinding()]
+  Param (
+    [Parameter(Mandatory=$true,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [PSObject]$Vmkernel,
+    [Parameter(Mandatory=$true)]
+    [array]$ListPropertiesVmkernels,
+    [Parameter(Mandatory=$true)]
+    [array]$ListPropertiesNicTeaming
+  )
+  Begin{}
+  Process{
+    $Hashtable = @{}
+    $VirtualPortGroup = Get-VirtualPortGroup -Name $Vmkernel.PortGroupName
+    $NicTeaming = Get-NicTeamingPolicy -VirtualPortGroup $VirtualPortGroup | Select-Object -Property $ListPropertiesNicTeaming
+    $Vmkernel = $Vmkernel | Select-Object -Property $ListPropertiesVmkernels
+
+    $Hashtable.VirtualSwitchName = $VirtualPortGroup.VirtualSwitchName
+    $Hashtable.VLanId = $VirtualPortGroup.VLanId
+
+    ForEach ($VmkernelProperty in $Vmkernel.PSObject.Properties) {
+      $Hashtable.($VmkernelProperty.Name) = $VmkernelProperty.Value
+    }
+    ForEach ($NicTeamingProperty in $NicTeaming.PSObject.Properties) {
+      $Hashtable.($NicTeamingProperty.Name) = $NicTeamingProperty.Value
+    }
+    Write-Output $Hashtable
+  }
+}
 
 function setVMHostNetwork {
   Param (

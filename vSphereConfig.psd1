@@ -64,7 +64,7 @@ RequiredAssemblies = 'VMware.Vim.dll'
 NestedModules = 'vSphereConfigUtil'
 
 # Functions to export from this module
-FunctionsToExport = 'Set-JSONtoESXi'
+FunctionsToExport = 'Set-JSONtoESXi','Get-JSONFromESXi'
 
 # Cmdlets to export from this module
 CmdletsToExport = '*'
