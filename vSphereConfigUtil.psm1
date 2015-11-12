@@ -134,7 +134,7 @@ function setSSH {
   }
 }
 
-function SetvSwitchs {
+function CreatevSwitchs {
   Param (
     [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
     [array]$vSwitch,
@@ -142,14 +142,47 @@ function SetvSwitchs {
   )
   Process {
     If ((Get-VirtualSwitch -Name $vSwitch.Name -ErrorAction SilentlyContinue) -eq $null){
-      Write-Host "*** Creating Virtual Switch $($vSwitch.Name)" -ForegroundColor Cyan
+      Write-Host "+++ Creating Virtual Switch $($vSwitch.Name)" -ForegroundColor Green
       If ($vSwitch.Nic -eq $null){
-        $VMHost | New-VirtualSwitch -Name $vSwitch.Name -Mtu $vSwitch.Mtu | Out-Null
+        $VMHost | New-VirtualSwitch -Name $vSwitch.Name -Mtu $vSwitch.Mtu -confirm:$false | Out-Null
       } else {
-        $VMHost | New-VirtualSwitch -Name $vSwitch.Name -Mtu $vSwitch.Mtu -Nic $vSwitch.Nic | Out-Null
+        $VMHost | New-VirtualSwitch -Name $vSwitch.Name -Mtu $vSwitch.Mtu -Nic $vSwitch.Nic -confirm:$false | Out-Null
         SetNicTeamingPolicy -Object $vSwitch -Type "vSwitch" -VMHost $VMHost
       }
     }
+  }
+}
+
+function SetvSwitchs {
+  Param (
+    [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [array]$vSwitch,
+    [VMware.VimAutomation.ViCore.Impl.V1.Inventory.VMHostImpl]$VMHost
+  )
+  Process {
+    Write-Host "=== Configuring Virtual Switch $($vSwitch.Name)" -ForegroundColor Yellow
+    $VMHost | Get-VirtualSwitch -Name $vSwitch.Name | Set-VirtualSwitch -Mtu $vSwitch.Mtu -confirm:$false | Out-Null
+    If (!($vSwitch.Nic -eq $null)){
+      Foreach ($item in $vSwitch.Nic)
+      {
+        Write-Host "*** Add Nic $($item)" -ForegroundColor Cyan
+        $Nic = $VMHost | Get-VMHostNetworkAdapter -Name $item
+        $VMHost | Get-VirtualSwitch -Name $vSwitch.Name | Add-VirtualSwitchPhysicalNetworkAdapter -VMHostPhysicalNic $Nic -confirm:$false
+      }
+      SetNicTeamingPolicy -Object $vSwitch -Type "vSwitch" -VMHost $VMHost
+    }
+  }
+}
+
+function RemovevSwitchs {
+  Param (
+    [Parameter(Mandatory=$True,ValueFromPipeline=$True,ValueFromPipelinebyPropertyName=$True)]
+    [array]$vSwitch,
+    [VMware.VimAutomation.ViCore.Impl.V1.Inventory.VMHostImpl]$VMHost
+  )
+  Process {
+    Write-Host "--- Deleting Virtual Switch $($vSwitch.Name)" -ForegroundColor Red
+    $VMHost | Get-VirtualSwitch -Name $vSwitch.Name | Remove-VirtualSwitch -confirm:$false | Out-Null
   }
 }
 
@@ -222,4 +255,4 @@ function SetNicTeamingPolicy {
       $NicTeamingPolicy | Set-NicTeamingPolicy -MakeNicUnused $Object.UnusedNic | Out-Null
     }
   }
-} ## end function
+}## end function

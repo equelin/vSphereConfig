@@ -67,46 +67,73 @@ Function Set-JSONtoESXi {
   )
 
   Begin {
-    #Get the content of the file
-    $ESXiConfig = Get-Content -Raw -Path $JsonFile | ConvertFrom-Json
+    #Get Existing configuration of the Host
+    Write-Host "Retrieving existing configuration of the Host" -ForegroundColor Blue
+    Get-VMHost | Get-JSONFromESXi -JsonFile .\temp.json
+
+    #Get the content of the base file
+    $ESXiConfigBase = Get-Content -Raw -Path .\temp.json | ConvertFrom-Json
+
+    #Get the content of the reference file
+    $ESXiConfigReference = Get-Content -Raw -Path $JsonFile | ConvertFrom-Json
   }
   Process {
 
     #Configure Host Network
-    If ($ESXiConfig.VMHostNetwork.PSObject.Properties.Count -gt 0) {
+    If ($ESXiConfigReference.VMHostNetwork.PSObject.Properties.Count -gt 0) {
       Write-Host "Configure Host Network" -ForegroundColor Blue
-      $ESXiConfig.VMHostNetwork | setVMHostNetwork -VMHost $VMHost
+      $ESXiConfigReference.VMHostNetwork | setVMHostNetwork -VMHost $VMHost
     }
 
     #Configure NTP
-    If ($ESXiConfig.NTP.PSObject.Properties.Count -gt 0) {
+    If ($ESXiConfigReference.NTP.PSObject.Properties.Count -gt 0) {
       Write-Host "Configure NTP" -ForegroundColor Blue
-      $ESXiConfig.NTP | setNTP -VMHost $VMHost
+      $ESXiConfigReference.NTP | setNTP -VMHost $VMHost
     }
 
     #Configure SSH
-    If ($ESXiConfig.SSH.PSObject.Properties.Count -gt 0) {
+    If ($ESXiConfigReference.SSH.PSObject.Properties.Count -gt 0) {
       Write-Host "Configure SSH" -ForegroundColor Blue
-      $ESXiConfig.SSH | setSSH -VMHost $VMHost
+      $ESXiConfigReference.SSH | setSSH -VMHost $VMHost
     }
 
     #Configure vSwitchs
-    If ($ESXiConfig.vSwitchs.Count -gt 0) {
+    If ($ESXiConfigReference.vSwitchs.Count -gt 0) {
       Write-Host "Configure vSwitchs" -ForegroundColor Blue
-      $ESXiConfig.vSwitchs | SetvSwitchs -VMHost $VMHost
+
+      $items = "vSwitchs"
+      $key= "Name"
+
+      #Compare source/base vSwitchs to the reference vSwitchs
+      Foreach ($itemBase in $ESXiConfigBase.$items) {
+          If ($ESXiConfigReference.$items.$key -contains $itemBase.$key) {
+            Write-Host "=== $($items) $($itemBase.$key)" -ForegroundColor Yellow
+            $itemBase | SetvSwitchs -VMHost $VMHost
+          } Else {
+            Write-Host "--- $($items) $($itemBase.$key)" -ForegroundColor Red
+            $itemBase | RemovevSwitchs -VMHost $VMHost
+          }
+      }
+      #Compare reference vSwitchs to the source/base vSwitchs
+      Foreach ($itemRef in $ESXiConfigReference.$items) {
+          If (!($ESXiConfigBase.$items.$key -contains $itemRef.$key)) {
+            Write-Host "+++ $($items) $($itemRef.$key)" -ForegroundColor Green
+            $itemRef | CreatevSwitchs -VMHost $VMHost
+          }
+      }
     }
 
     #Configure Portgroups
-    If ($ESXiConfig.Portgroups.Count -gt 0) {
+    If ($ESXiConfigReference.Portgroups.Count -gt 0) {
       Write-Host "Configure Portgroups" -ForegroundColor Blue
-      $ESXiConfig.Portgroups | SetPortgroups -VMHost $VMHost
+      $ESXiConfigReference.Portgroups | SetPortgroups -VMHost $VMHost
     }
 
     #Configure Vmkernels
-    If ($ESXiConfig.Vmkernels.Count -gt 0) {
+    If ($ESXiConfigReference.Vmkernels.Count -gt 0) {
       Write-Host "Configure Vmkernels" -ForegroundColor Blue
-      $ESXiConfig.Vmkernels | SetVmkernels -VMHost $VMHost
+      $ESXiConfigReference.Vmkernels | SetVmkernels -VMHost $VMHost
     }
-    Write-Output $VMHost
+    Write-Output $VMHost | Out-Null
   }
 }
